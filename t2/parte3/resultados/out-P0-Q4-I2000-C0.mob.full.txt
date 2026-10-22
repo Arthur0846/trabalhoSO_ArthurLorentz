@@ -1,0 +1,12 @@
+ini
+fim
+
+tempo = ticks x intervalo de relogio, em instrucoes
+intervalo do relogio = 2000 instrucoes por tick
+p2 v=136000 e=134000 p=2000 b=0 pre=16 r=- E=17 P=17 B=0
+p1 v=140000 e=6000 p=0 b=134000 pre=0 r=0 E=2 P=2 B=1
+SO t=140000 ocioso=0 irq r=70 s=12 c=0 x=0 pre=16 proc=2
+irq por vetor: v7=12 v10=70
+
+
+CPU parada (halt) apos 175641 instrucoes.

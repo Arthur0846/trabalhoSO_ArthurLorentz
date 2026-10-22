@@ -1,0 +1,30 @@
+Saida esperada de parte2/t2p2.mob (make run-p2)
+Comando: build/tools/simulador parte2/t2p2.mob  (D0, C)
+Depois de D0 e C, digitar `Eab` e Enter para enfileirar dois caracteres
+imprimíveis e destravar os dois leitores. O comando `E` acrescenta uma
+quebra de linha ao texto; `Ea` seguido de `Eb` faria o segundo leitor receber
+a quebra de linha em vez de `b`.
+
+A parte deterministica da saida e':
+
+ini p2
+espera vivo=0        espera por processo vivo retorna 0
+le:le: [a]           ambos os caracteres 'a' e 'b' devem aparecer entre
+ [b]                 colchetes; a ordem dos leitores pode variar
+fim
+
+Relatorio (as metricas variam com o atraso antes de `Eab`, porque o
+processo ocioso roda enquanto os leitores estao bloqueados):
+ ini p2
+ espera vivo=0
+ le:le: [a]
+ [b]
+ fim
+ tempo = ticks x intervalo de relogio, em instrucoes
+ intervalo do relogio = 4000 instrucoes por tick
+ p2 v=16000 e=12000 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
+ p3 v=84000 e=4000 p=0 b=80000 pre=0 r=0 E=2 P=2 B=1
+ p4 v=88000 e=8000 p=4000 b=76000 pre=0 r=0 E=2 P=2 B=1
+ p1 v=112000 e=12000 p=4000 b=96000 pre=0 r=0 E=3 P=3 B=2
+ SO t=112000 ocioso=76000 irq r=28 s=53 c=1 x=0 pre=0 proc=4
+ irq por vetor: v7=53 v8=1 v10=28

@@ -1,0 +1,55 @@
+Saida esperada de parte3/t2.mob (configuracao padrao)
+Comando: build/tools/simulador parte3/t2.mob  (D0, C)
+
+ini
+......fim
+
+tempo = ticks x intervalo de relogio, em instrucoes
+intervalo do relogio = 4000 instrucoes por tick
+p3 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p4 v=4000 e=0 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
+p5 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p6 v=4000 e=0 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
+p7 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p8 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p2 v=220000 e=204000 p=0 b=16000 pre=11 r=0 E=17 P=17 B=5
+p1 v=224000 e=4000 p=0 b=220000 pre=0 r=0 E=2 P=2 B=1
+SO t=224000 ocioso=0 irq r=56 s=36 c=0 x=0 pre=11 proc=8
+irq por vetor: v7=36 v10=56
+
+Saida esperada de parte3/t2ex.mob (make run-excecoes)
+Comando: build/tools/simulador parte3/t2ex.mob  (D0, C)
+
+Um processo executa instrucao privilegiada (v2) e outro divisao por zero
+(v3). Cada um morre sozinho; o sistema continua vivo e o processo normal
+imprime 'ok'.
+
+ excecoes
+ EXCECAO v2 pid=2 ip=24112
+ EXCECAO v3 pid=3 ip=24126
+ ok
+ fim
+ tempo = ticks x intervalo de relogio, em instrucoes
+ intervalo do relogio = 4000 instrucoes por tick
+ p2 v=8000 e=4000 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
+ p3 v=8000 e=4000 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
+ p4 v=80000 e=72000 p=8000 b=0 pre=4 r=- E=5 P=5 B=0
+ p1 v=88000 e=8000 p=20000 b=60000 pre=0 r=8000 E=3 P=3 B=2
+ SO t=88000 ocioso=0 irq r=22 s=24 c=0 x=2 pre=4 proc=4
+ irq por vetor: v2=1 v3=1 v7=24 v10=22
+
+Teste específico da exceção no init:
+Comando: build/tools/simulador parte3/t2initex.mob  (D0, C)
+
+O init executa uma instrução de E/S em modo usuário. A exceção deve encerrar
+o próprio init e imprimir o relatório antes de o simulador parar. O marcador
+`X` não deve aparecer, pois a instrução seguinte à que falha não é executada.
+
+ I
+ EXCECAO v2 pid=1 ip=23618
+
+ tempo = ticks x intervalo de relogio, em instrucoes
+ intervalo do relogio = 4000 instrucoes por tick
+ p1 v=0 e=0 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+ SO t=0 ocioso=0 irq r=0 s=1 c=0 x=1 pre=0 proc=1
+ irq por vetor: v2=1 v7=1
