@@ -1,5 +1,5 @@
 I
-EXCECAO v2 pid=1 ip=23618
+EXCECAO v2 pid=1 ip=24796
 
 tempo = ticks x intervalo de relogio, em instrucoes
 intervalo do relogio = 4000 instrucoes por tick
@@ -8,4 +8,4 @@ SO t=0 ocioso=0 irq r=0 s=1 c=0 x=1 pre=0 proc=1
 irq por vetor: v2=1 v7=1
 
 
-CPU parada (halt) apos 24363 instrucoes.
+CPU parada (halt) apos 24666 instrucoes.

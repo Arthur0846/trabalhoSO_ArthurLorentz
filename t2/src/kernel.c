@@ -52,6 +52,7 @@ struct Registro {
     int resp_total;
     int resp_n;
     int preemp;
+    int vivo;
 };
 
 struct Registro registros[N_REGISTROS];
@@ -82,23 +83,57 @@ int  dispositivo_tem_entrada(void);
 int  dispositivo_le(void);
 int  tempo(void);
 int  le_tiques_bios(void);
+int  le_contador_relogio(void);
 void programa_relogio(int intervalo);
 void so_conta_interrupcao(int vetor);
 void desbloqueia_espera(int vitima);
 void so_excecao(int *quadro, int vetor);
 void so_relatorio(void);
+void arquiva_vivos(void);
 void init(void);
 void ocioso(void);
 
 int pilhas[N_PROCESSOS][64];
 int pilha_ociosa[64];
 
-/* Tempo interno em ticks do relogio. O contador de ciclos do hardware nao e'
-   confiavel entre chamadas do kernel: um processo CPU-bound pode faze-lo dar
-   a volta varias vezes. A impressao converte ticks para instrucoes. */
+/* Tempo interno em ticks do relogio (contador_tiques da BIOS), convertido
+   para instrucoes na impressao. O contador do hardware (portas 0x20/0x21)
+   volta a 0 ao atingir o limite, entao ticks*intervalo + contador daria
+   resolucao de 1 instrucao, mas exigiria aritmetica de 32 bits (o mcc so
+   tem int de 16 bits) em todos os acumuladores; por isso a resolucao e'
+   de 1 tick (ver RELATORIO.md, secao 5). */
 int tempo(void)
 {
     return le_tiques_bios();
+}
+
+/* Obtem tempo atual em instrucoes (ticks * intervalo + contador do relogio) */
+void tempo_instrucoes(int *hi, int *lo)
+{
+    int ticks = le_tiques_bios();
+    int contador = le_contador_relogio();
+    int mult = intervalo_relogio;
+    int m = ticks;
+    int carry = 0;
+    int prod_lo = 0;
+    int prod_hi = 0;
+    
+    while (m > 0) {
+        if (m & 1) {
+            int tmp = prod_lo + mult;
+            if (tmp < prod_lo) carry = 1;
+            prod_lo = tmp;
+            prod_hi = prod_hi + carry;
+        }
+        mult = mult + mult;
+        if (mult < 0) mult = mult & 0xFFFF;
+        m = m >> 1;
+    }
+    
+    *lo = prod_lo + contador;
+    if (*lo < prod_lo) carry = 1;
+    else carry = 0;
+    *hi = prod_hi + carry;
 }
 
 void so_conta_interrupcao(int vetor)
@@ -532,9 +567,124 @@ void kernel_tempo(int ticks)
     kernel_mult(ticks, intervalo_relogio);
 }
 
+/* Imprime um tempo de 32 bits (hi:lo) em decimal */
+void kernel_tempo32(int hi, int lo)
+{
+    int hi_100[4];
+    int lo_100[4];
+    int hi_n = 0, lo_n = 0;
+    int tmp;
+    
+    tmp = hi;
+    if (tmp == 0) { hi_100[0] = 0; hi_n = 1; }
+    while (tmp > 0) { hi_100[hi_n++] = tmp % 100; tmp /= 100; }
+    
+    tmp = lo;
+    if (tmp == 0) { lo_100[0] = 0; lo_n = 1; }
+    while (tmp > 0) { lo_100[lo_n++] = tmp % 100; tmp /= 100; }
+    
+    int prod[10];
+    int prod2[10];
+    int total[12];
+    int carry;
+    int i;
+    
+    for (i = 0; i < 12; i++) total[i] = 0;
+    
+    carry = 0;
+    i = 0;
+    while (i < hi_n || carry > 0) {
+        int p = (i < hi_n ? hi_100[i] : 0) * 655 + carry;
+        prod[i] = p % 100;
+        carry = p / 100;
+        i++;
+    }
+    int hi_n2 = i;
+    
+    carry = 0;
+    i = 0;
+    while (i < hi_n || carry > 0) {
+        int p = (i < hi_n ? hi_100[i] : 0) * 36 + carry;
+        prod2[i] = p % 100;
+        carry = p / 100;
+        i++;
+    }
+    int hi_n3 = i;
+    
+    for (i = 0; i < hi_n2; i++) {
+        total[i + 1] = prod[i];
+    }
+    carry = 0;
+    for (i = 0; i < hi_n3; i++) {
+        int s = total[i] + prod2[i] + carry;
+        total[i] = s % 100;
+        carry = s / 100;
+    }
+    i = hi_n3;
+    while (carry > 0) {
+        int s = total[i] + carry;
+        total[i] = s % 100;
+        carry = s / 100;
+        i++;
+    }
+    carry = 0;
+    for (i = 0; i < lo_n; i++) {
+        int s = total[i] + lo_100[i] + carry;
+        total[i] = s % 100;
+        carry = s / 100;
+    }
+    i = lo_n;
+    while (carry > 0) {
+        int s = total[i] + carry;
+        total[i] = s % 100;
+        carry = s / 100;
+        i++;
+    }
+    
+    int j = 11;
+    while (j > 0 && total[j] == 0) j--;
+    
+    for (i = j; i >= 0; i--) {
+        if (i == j) {
+            kernel_num(total[i]);
+        } else if (total[i] < 10) {
+            dispositivo_escreve('0');
+            kernel_num(total[i]);
+        } else {
+            kernel_num(total[i]);
+        }
+    }
+}
+
+/* Quando o init morre, filhos ainda vivos tambem entram no relatorio: fecha
+   o tempo do estado atual de cada um e arquiva com a marca "vivo". So' roda
+   no relatorio, fora do caminho quente (relogio/syscalls). */
+void arquiva_vivos(void)
+{
+    int i;
+    int agora;
+
+    agora = tempo();
+    for (i = 0; i < N_PROCESSOS; i++) {
+        if (processos[i].estado != MORTO) {
+            processos[i].tempo_em[processos[i].estado] =
+                processos[i].tempo_em[processos[i].estado] + agora - processos[i].desde;
+            processos[i].desde = agora;
+            processos[i].vida = agora - processos[i].t_criacao;
+            arquiva(i);
+            if (n_registros > 0 && registros[n_registros - 1].pid == processos[i].pid) {
+                registros[n_registros - 1].vivo = 1;
+            }
+        }
+    }
+}
+
 void so_relatorio(void)
 {
     int i;
+    int agora_hi, agora_lo;
+
+    arquiva_vivos();
 
     kernel_texto("\n");
     kernel_texto("tempo = ticks x intervalo de relogio, em instrucoes\n");
@@ -566,11 +716,15 @@ void so_relatorio(void)
         kernel_num(registros[i].entradas_em[PRONTO]);
         kernel_texto(" B=");
         kernel_num(registros[i].entradas_em[BLOQUEADO]);
+        if (registros[i].vivo) {
+            kernel_texto(" (vivo)");
+        }
         kernel_texto("\n");
     }
     kernel_texto("SO t=");
     kernel_tempo(tempo());
     kernel_texto(" ocioso=");
+    /* ocioso_total e' em ticks, converte para instrucoes */
     kernel_tempo(ocioso_total);
     kernel_texto(" irq r=");
     kernel_num(int_relogio);

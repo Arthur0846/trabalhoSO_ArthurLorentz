@@ -25,8 +25,8 @@ Um processo executa instrucao privilegiada (v2) e outro divisao por zero
 imprime 'ok'.
 
  excecoes
- EXCECAO v2 pid=2 ip=24112
- EXCECAO v3 pid=3 ip=24126
+ EXCECAO v2 pid=2 ip=25290
+ EXCECAO v3 pid=3 ip=25304
  ok
  fim
  tempo = ticks x intervalo de relogio, em instrucoes
@@ -46,10 +46,16 @@ o próprio init e imprimir o relatório antes de o simulador parar. O marcador
 `X` não deve aparecer, pois a instrução seguinte à que falha não é executada.
 
  I
- EXCECAO v2 pid=1 ip=23618
+ EXCECAO v2 pid=1 ip=24796
 
  tempo = ticks x intervalo de relogio, em instrucoes
  intervalo do relogio = 4000 instrucoes por tick
  p1 v=0 e=0 p=0 b=0 pre=0 r=- E=1 P=1 B=0
  SO t=0 ocioso=0 irq r=0 s=1 c=0 x=1 pre=0 proc=1
  irq por vetor: v2=1 v7=1
+
+----
+Saida esperada de parte3/t2vivos.mob (make run-vivos)
+Comando: build/tools/simulador parte3/t2vivos.mob  (D0, C)
+O init cria dois filhos (um em laco, outro bloqueado em SO_LE) e morre.
+O relatorio deve listar p1 (init, morto) e p2, p3 marcados "(vivo)".

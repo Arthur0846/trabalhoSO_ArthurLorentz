@@ -36,7 +36,12 @@ QUANTUM   ?= 4
 CARGA     ?= 2
 INTERVALO ?= 4000
 
-all: tools parte1/t2p1.mob parte2/t2p2.mob parte3/t2.mob parte3/t2ex.mob parte3/t2initex.mob
+# so_escalona calcula t_exec * 256 / QUANTUM em int de 16 bits: QUANTUM > 127 estoura.
+ifneq ($(shell [ "$(QUANTUM)" -gt 127 ] 2>/dev/null && echo x),)
+$(error QUANTUM=$(QUANTUM) > 127 estoura o int de 16 bits no calculo da prioridade)
+endif
+
+all: tools parte1/t2p1.mob parte2/t2p2.mob parte3/t2.mob parte3/t2ex.mob parte3/t2initex.mob parte3/t2vivos.mob
 
 # Diretorios gerados.
 $(BUILD) $(EXP) $(TOOLS) parte1 parte2 parte3:
@@ -83,7 +88,13 @@ $(BUILD)/teste_parte1.asm: $(USR)/teste_parte1.c $(BUILD)/config.h $(MCC)
 $(BUILD)/teste_parte2.asm: $(USR)/teste_parte2.c $(BUILD)/config.h $(MCC)
 	$(MCC) -I$(BUILD) $< -o $@
 
+$(BUILD)/teste_vivos.asm: $(USR)/teste_vivos.c $(BUILD)/config.h $(MCC)
+	$(MCC) -I$(BUILD) $< -o $@
+
 # Binarios entregues.
+parte3/t2vivos.mob: $(BIOS) $(SRC)/ponte.asm $(BUILD)/kernel.asm $(BUILD)/teste_vivos.asm $(MONTADOR) | parte3
+	$(MONTADOR) $(BIOS) $(SRC)/ponte.asm $(BUILD)/kernel.asm $(BUILD)/teste_vivos.asm -o $@
+
 parte3/t2.mob: $(BIOS) $(SRC)/ponte.asm $(BUILD)/kernel.asm $(BUILD)/usuario.asm $(MONTADOR) | parte3
 	$(MONTADOR) $(BIOS) $(SRC)/ponte.asm $(BUILD)/kernel.asm $(BUILD)/usuario.asm -o $@
 
@@ -103,6 +114,7 @@ run-p1: ; $(MAKE) parte1/t2p1.mob
 run-p2: ; $(MAKE) parte2/t2p2.mob
 run-excecoes: ; $(MAKE) parte3/t2ex.mob
 run-init-excecao: ; $(MAKE) parte3/t2initex.mob
+run-vivos: ; $(MAKE) parte3/t2vivos.mob
 
 # Experimentos da parte III em build/exp/out-P*-Q*-I*-C*.mob.
 NOME = out-P$(POLITICA)-Q$(QUANTUM)-I$(INTERVALO)-C$(CARGA).mob
@@ -167,9 +179,9 @@ clean:
 	rm -rf $(BUILD)
 
 distclean: clean
-	rm -f parte1/t2p1.mob parte2/t2p2.mob parte3/t2.mob parte3/t2ex.mob parte3/t2initex.mob
+	rm -f parte1/t2p1.mob parte2/t2p2.mob parte3/t2.mob parte3/t2ex.mob parte3/t2initex.mob parte3/t2vivos.mob parte3/t2vivos.mob
 
-.PHONY: all clean distclean tools _run FORCE simulador-largo run-p1 run-p2 run-excecoes run-init-excecao \
+.PHONY: all clean distclean tools _run FORCE simulador-largo run-p1 run-p2 run-excecoes run-init-excecao run-vivos \
         run-rr-q1 run-rr-q2 run-rr-q4 run-rr-q8 run-rr-q16 \
         run-prio-q1 run-prio-q4 run-prio-q16 \
         run-i1000 run-i2000 run-i4000 \

@@ -1,8 +1,8 @@
 excecoes
 
-EXCECAO v2 pid=2 ip=24112
+EXCECAO v2 pid=2 ip=25290
 
-EXCECAO v3 pid=3 ip=24126
+EXCECAO v3 pid=3 ip=25304
 ok
 fim
 
@@ -16,4 +16,4 @@ SO t=88000 ocioso=0 irq r=22 s=24 c=0 x=2 pre=4 proc=4
 irq por vetor: v2=1 v3=1 v7=24 v10=22
 
 
-CPU parada (halt) apos 140689 instrucoes.
+CPU parada (halt) apos 141019 instrucoes.

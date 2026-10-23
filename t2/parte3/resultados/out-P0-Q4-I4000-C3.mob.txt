@@ -9,4 +9,4 @@ SO t=72000 ocioso=64000 irq r=18 s=15 c=1 x=0 pre=0 proc=2
 irq por vetor: v7=15 v8=1 v10=18
 
 
-CPU parada (halt) apos 107555 instrucoes.
+CPU parada (halt) apos 240033 instrucoes.
