@@ -46,9 +46,10 @@ Lê o contador do relógio (portas `0x20`/`0x21`) como semente e aplica
 
 Mini SO para o processador Mancha, com multiprogramação, cinco chamadas de
 sistema, bloqueio de E/S, espera pela morte de processos, escalonamento
-circular e por prioridade, preempção e métricas de execução. O código e os
-binários estão em `t2/`; as decisões de projeto, as configurações testadas e
-os resultados estão em [`t2/RELATORIO.md`](t2/RELATORIO.md).
+circular e por prioridade, preempção e métricas de execução. O código está em
+`t2/`; os binários são gerados pelo `make`. As decisões de projeto, as
+configurações testadas e os resultados estão em
+[`t2/RELATORIO.md`](t2/RELATORIO.md).
 
 ### Dependências
 
@@ -67,13 +68,14 @@ cd t2
 make
 ```
 
-O comando gera os cinco binários entregues:
+O comando gera os seis binários entregues:
 
 - `parte1/t2p1.mob` — processos e multiprogramação;
 - `parte2/t2p2.mob` — bloqueio de E/S e `SO_ESPERA_PROC`;
 - `parte3/t2.mob` — escalonadores e métricas;
 - `parte3/t2ex.mob` — exceções em processos filhos;
-- `parte3/t2initex.mob` — exceção no processo init.
+- `parte3/t2initex.mob` — exceção no processo init;
+- `parte3/t2vivos.mob` — processos vivos no relatório final.
 
 Os arquivos intermediários e os binários de experimento ficam em `t2/build/`,
 que não faz parte da entrega.
@@ -93,6 +95,10 @@ ter pelo menos 90 colunas por 36 linhas. Para a parte II, depois de `D0` e `C`,
 digite `Eab` e Enter para enfileirar dois caracteres e desbloquear os dois
 leitores.
 
+Se precisar de mais linhas no console, `make simulador-largo` gera
+`build/simulador_largo` com 60 linhas; nesse caso use
+`TERM=xterm-256color COLUMNS=120 LINES=50` (necessário no WSL/Linux).
+
 As saídas esperadas e os pontos que variam entre execuções estão em:
 
 - `t2/parte1/SAIDA_ESPERADA.txt`
@@ -111,6 +117,7 @@ make run-p1
 make run-p2
 make run-excecoes
 make run-init-excecao
+make run-vivos
 ```
 
 Os binários de experimento ficam em `t2/build/exp/` e podem ser executados
@@ -125,7 +132,7 @@ build/tools/simulador build/exp/out-P0-Q4-I4000-C2.mob
 ```sh
 cd t2
 make clean       # remove apenas build/
-make distclean   # remove build/ e os cinco binários entregues
+make distclean   # remove build/ e os seis binários entregues
 ```
 
 Não use o `make clean` da raiz do projeto Mancha, pois ele também apaga os
