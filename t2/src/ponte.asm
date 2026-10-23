@@ -15,6 +15,19 @@ _kernel_inicio:
         add     r0, 2
         st      r1, (r0)
 
+        ld      r0, _exc_seg
+        st      r0, (8)
+        ld      r0, _exc_priv
+        st      r0, (16)
+        ld      r0, _exc_div0
+        st      r0, (24)
+        ld      r0, _exc_ilegal
+        st      r0, (32)
+        ld      r0, _exc_pagina
+        st      r0, (40)
+        ld      r0, _console_trampolim
+        st      r0, (64)
+
         ld      r0, TICKS_POR_FATIA
         ld      r1, r0
         shr     r1, 8
@@ -133,3 +146,39 @@ _f_programa_relogio:
         ld      sp, bp
         pop     bp
         ret
+
+_exc_seg:
+        ld      r0, 1
+        jmp     _exc_comum
+_exc_priv:
+        ld      r0, 2
+        jmp     _exc_comum
+_exc_div0:
+        ld      r0, 3
+        jmp     _exc_comum
+_exc_ilegal:
+        ld      r0, 4
+        jmp     _exc_comum
+_exc_pagina:
+        ld      r0, 5
+        jmp     _exc_comum
+_exc_comum:
+        ld      r1, sp
+        push    r0
+        push    r1
+        call    _f_so_excecao
+        add     sp, 4
+        ld      r1, (_g_so_sem_processos)
+        cmp     r1, 0
+        jmpc    ne, _exc_parada
+        ld      sp, pilha_sistema
+        add     sp, -32
+        rete
+_exc_parada:
+        halt
+_console_trampolim:
+        ld      r0, 8
+        push    r0
+        call    _f_so_conta_interrupcao
+        add     sp, 2
+        jmp     _bios_trata_console

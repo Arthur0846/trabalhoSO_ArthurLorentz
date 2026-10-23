@@ -24,7 +24,7 @@ t2/
   src/                o SO: kernel.c (C) e ponte.asm (assembly)
   usuario/            programas de usuario: cargas e testes de cada parte
   parte1/ parte2/ parte3/
-    *.mob             binario entregue e variantes de teste
+    *.mob             binario gerado por `make` (nao versionado)
     SAIDA_ESPERADA.txt  o que o binario deve imprimir
     resultados/       evidencias (saidas das execucoes)
   build/              GERADO e descartavel (config.h, .asm, experimentos, tools/); nao entregue
@@ -79,12 +79,14 @@ instalação dos vetores de exceção e de console, os trampolins
 exceção/console/relógio e o primeiro `rete`. O restante (tabela de
 processos, escalonador, chamadas de sistema, relatório) é C.
 
-**Correção da medição de tempo (resolução 1 instrução):** adicionada leitura do
-contador do relógio (porta 0x20) via `_f_le_contador_relogio` na ponte, e
-função `tempo_instrucoes()` no kernel que computa `ticks * intervalo + contador`
-em 32 bits (base 100). A impressão usa `kernel_tempo32(hi, lo)`. Com isso a
-resolução passa de 1 tick (4000 instr) para 1 instrução; `SO t` agora bate com
-o tempo real do simulador (erro ~1.700 instr = boot antes do relógio).
+**Medição de tempo:** os tempos são contados em ticks do relógio e convertidos
+para instruções multiplicando pelo intervalo configurado (`kernel_tempo`). A
+resolução efetiva é, portanto, o intervalo do relógio (1000, 2000 ou 4000
+instruções). A ponte expõe a leitura do contador da porta 0x20
+(`_f_le_contador_relogio`) e o kernel contém o auxiliar `tempo_instrucoes()`
+para uma resolução de 1 instrução, mas esse auxiliar não está integrado aos
+acumuladores de métricas, que usam `int` de 16 bits; o relatório usa a medição
+por ticks.
 
 Não há `ei` na ponte, e não é preciso: o quadro de cada processo é montado
 zerado, de modo que o `sr` do usuário nasce com `S=0`, `I=0` e `D=0` — as
@@ -102,7 +104,11 @@ religar interrupções à mão.
   `programa_relogio(INTERVALO)` dentro de `inicializa()`, usando o mesmo
   `INTERVALO` que o relatório declara. Não há valor duplicado no `.asm`.
 - **Unidade de tempo:** o enunciado pede tempo em instruções "medidas pelo
-  relógio". Internamente o SO agora usa **tempo de 32 bits**: `ticks * intervalo + contador_do_relogio` (porta 0x20), obtendo **resolução de 1 instrução**. A multiplicação `ticks * intervalo` e a soma do contador são feitas em base 100 (função `tempo_instrucoes`) para não estourar o `int` de 16 bits. No relatório, a impressão usa `kernel_tempo32(hi, lo)`.
+  relógio". O SO conta ticks de interrupção e converte para instruções
+  multiplicando pelo intervalo configurado; a resolução publicada é o próprio
+  intervalo (1000, 2000 ou 4000 instruções), não 1 instrução. O auxiliar
+  `tempo_instrucoes()` (leitura do contador da porta 0x20) existe no kernel,
+  mas não é usado pelas métricas por processo.
 - **SO_ESCREVE nunca bloqueia:** a console do Mancha está sempre pronta para
   saída (bit0 do registrador de estado, porta `0x02`, é sempre 1 e a escrita
   nunca falha). Somente `SO_LE` bloqueia.
@@ -172,15 +178,20 @@ Saídas completas em `parte3/resultados/`.
 
 ## 3. Resultados
 
+Os números abaixo foram medidos com o build atual deste repositório. Como o
+tempo é contado em ticks, diferenças de ±1 tick (1000/2000/4000 instruções)
+podem aparecer com outra versão de `mcc`/montador; as conclusões comparativas
+não dependem dessas flutuações.
+
 ### 3.1 Quantum (circular, carga mista, intervalo 4000)
 
 | quantum | preempções | SO t (instr) | irq relógio | E de p2 | instr simulador |
 | ------- | ------------ | ------------ | ------------ | ------- | --------------- |
-| 1       | 100          | 400000       | 100          | 96      | 480882          |
-| 2       | 29           | 260000       | 65           | 34      | 337365          |
-| 4       | 11           | 224000       | 56           | 17      | 302911          |
-| 8       | 5            | 208000       | 52           | 10      | 288301          |
-| 16      | 0            | 204000       | 51           | 7       | 282095          |
+| 1       | 101          | 404000       | 101          | 96      | 484793          |
+| 2       | 29           | 260000       | 65           | 34      | 337640          |
+| 4       | 11           | 224000       | 56           | 17      | 303361          |
+| 8       | 5            | 212000       | 53           | 10      | 288684          |
+| 16      | 0            | 204000       | 51           | 7       | 282386          |
 
 Quantum menor => mais expirações do quantum e mais entradas em execução:
 `E` de p2 cresce de 7 para 96. Esta comparação mede eventos e tempo total;
@@ -190,20 +201,20 @@ não mede diretamente a latência de resposta.
 
 | intervalo | SO t (instr) | irq relógio | resolução visível | instr simulador |
 | --------- | ------------ | ------------ | -------------------- | --------------- |
-| 1000      | 397000       | 397          | p4 e=2000, p=1000    | 595376          |
-| 2000      | 292000       | 146          | p4 e=4000, p=2000    | 379241          |
-| 4000      | 224000       | 56           | p3 e=4000            | 302911          |
+| 1000      | 399000       | 399          | p4 e=2000, p=1000    | 597863          |
+| 2000      | 288000       | 144          | p4 e=2000, p=2000    | 378394          |
+| 4000      | 224000       | 56           | p4 e=4000            | 303361          |
 
 O mesmo trabalho leva `SO t` diferente conforme o intervalo. A leitura mais simples é o **custo do tratador de relógio** (a seção 5 explica por que os dados não separam isso de tick fundido).
 Modelando `T(ticks) = W + c*ticks` (W = trabalho, c = custo por interrupção)
 e usando os ticks = `SO t / intervalo` (que batem com a coluna *irq relógio*),
 as linhas I1000 e I4000 dão
 
-    W + 397c = 397000
-    W +  56c = 224000   =>  341c = 173000  =>  c ~ 507 instruções/tick
+    W + 399c = 399000
+    W +  56c = 224000   =>  343c = 175000  =>  c ~ 510 instruções/tick
 
-Com W ~ 196000, o ponto I2000 (`W + 146c ~ 270000`) fica cerca de 8% abaixo
-  do medido (292000). Ou seja, **cada interrupção de relógio custa cerca de 500
+Com W ~ 195000, o ponto I2000 (`W + 144c ~ 269000`) fica cerca de 7% abaixo
+  do medido (288000). Ou seja, **cada interrupção de relógio custa cerca de 500
   instruções** (na carga 0, isolando boot/relatório, sai ~300 -- ver seção 5),
   e com intervalo 1000 isso é ~metade da CPU. Intervalo menor dá resolução
   mais fina das métricas (`p4 e=2000`), ao custo de gastar mais tempo em
@@ -213,9 +224,8 @@ Com W ~ 196000, o ponto I2000 (`W + 146c ~ 270000`) fica cerca de 8% abaixo
 ### 3.3 Circular x Prioridade
 
 **Carga concorrente homogênea** (4 processos CPU-bound iguais, quantum 4):
-ambos dao fatias quase iguais (`pre=6` cada; no circular `e=100000` em três
-processos e `96000` no quarto, e na prioridade `e=100000` nos quatro -- um
-processo que termina com a fila quase vazia perde o resto do quantum);
+ambos dao fatias quase iguais (`pre=6` cada; nas duas políticas `e=100000`
+nos quatro processos);
 `SO t` = 412000 no circular e 424000 na prioridade (diferença de ~3%). Como os
 processos são idênticos, `t_exec/t_quantum ~= 1` para todos e a prioridade
 converge para o mesmo valor; nesse caso se comporta como o circular, conforme
@@ -227,13 +237,13 @@ diferentes: 500/1500/3000/6000 iterações, quantum 4):
 |                      | circular | prioridade |
 | -------------------- | -------- | ---------- |
 | p5 (maior carga) pre | 12       | 12         |
-| p5 e (instr)         | 200000   | 196000     |
+| p5 e (instr)         | 196000   | 196000     |
 | pre total            | 22       | 22         |
 | resposta do init (r) | 24000    | 0          |
 
-A preempção do processo mais longo é igual nas duas políticas (12); a
-prioridade altera ligeiramente seu tempo de execução e a resposta do init
-(24000 para 0). A diferença é pequena: as cargas 4 e 5 são CPU-bound puras,
+A preempção do processo mais longo é igual nas duas políticas (12) e seu
+tempo de execução não muda nesta execução; a prioridade reduz a resposta do
+init (24000 para 0). A diferença é pequena: as cargas 4 e 5 são CPU-bound puras,
 então todos partem de prioridade 0,5 e a fórmula (uma média) converge
 lentamente. O cenário onde a prioridade deve vencer é a **mistura de
 CPU-bound com processos que se bloqueiam** -- é o que a CARGA 6 mede.
@@ -276,10 +286,10 @@ filhos ~20000 -> ~4500 (ver `out-P0-Q4-I4000-C6.mob.txt` e
 recai sobre o CPU-bound e não é uniforme entre configurações:
 
 - Carga 6, intervalo 4000: o tempo de retorno do CPU-bound (`p2`) sobe de
-  488000 (circular) para 620000 (prioridade), cerca de +27%, e a resposta do
+  492000 (circular) para 620000 (prioridade), cerca de +26%, e a resposta do
   misto (`p4`, `r`) piora de 8000 para 12000. Em compensação o bloqueante
   (`p3`) cai de `v=464000` para `v=108000` e o misto termina antes
-  (`v` 628000 -> 576000). Com intervalo 1000 o efeito sobre o CPU-bound é
+  (`v` 632000 -> 580000). Com intervalo 1000 o efeito sobre o CPU-bound é
   pequeno (`v` 1150000 -> 1189000, +3%) e a resposta do misto melhora
   (4000 -> 1000): o sinal depende da resolução do relógio.
 - Carga 4 (4 CPU-bound iguais), quantum 1: `SO t` sobe de 772000 (193 ticks)
@@ -326,7 +336,7 @@ B tabela: cheio(-1) n=7 <- 7 processos cabem; o 8o retorna -1
 C erros: inexist=-1, auto=-1  <- espera de pid inexistente e do proprio pid
 ```
 
-Relatório (com tempos em resolução de 1 instrução):
+Relatório (tempos em múltiplos do intervalo de 4000; execução desta máquina):
 ```
 ini p1
 A pids: 2 3 4
@@ -335,14 +345,18 @@ C erros: inexist=-1, auto=-1
 fim
 tempo = ticks x intervalo de relogio, em instrucoes
 intervalo do relogio = 4000 instrucoes por tick
-p2 v=4000 e=3093 p=0 b=0 pre=0 r=- E=1 P=1 B=0
-p3 v=4000 e=1787 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p2 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p3 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p4 v=4000 e=4000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
 ...
+p1 v=304000 e=180000 p=112000 b=12000 pre=10 r=0 E=14 P=14 B=3
 SO t=304000 ocioso=0 irq r=76 s=105 c=0 x=0 pre=17 proc=11
 irq por vetor: v7=105 v10=76
 ```
 
-*Nota: valores de `e`, `p`, `b`, `SO t` agora em resolução de 1 instrução (antes eram múltiplos de 4000).*
+*Nota: `SO t` é o tempo até o relatório; o total do simulador inclui boot e
+impressão (410.658 instruções nesta execução). Os valores exatos podem variar
+em ±1 tick conforme a versão do `mcc`/montador usada no build.*
 
 **Parte II** (gerar com `make run-p2` e executar o binário conforme
 `parte2/SAIDA_ESPERADA.txt`): dois processos leem a console e ficam
@@ -357,11 +371,11 @@ a quebra de linha em vez de `b`.
 espera vivo=0
 le:le: [a]
  [b]
-SO t=112000 ocioso=76000 irq r=28 s=53 c=1 x=0 pre=0 proc=4
-irq por vetor: v7=53 v8=1 v10=28
+SO t=212000 ocioso=176000 irq r=53 s=53 c=1 x=0 pre=0 proc=4
+irq por vetor: v7=53 v8=1 v10=53
 ```
 
-`ocioso=76000` (≈68% do tempo) mostra que o SO não faz espera ocupada: com
+`ocioso=176000` (≈83% do tempo) mostra que o SO não faz espera ocupada: com
 os dois leitores bloqueados e o init esperando, o único processo pronto é o
 ocioso, e o SO o roda. `v8=1` confirma que a entrada chegou por interrupção
 da console e desbloqueou os leitores.
@@ -381,8 +395,8 @@ Processos que executam instrução privilegiada/divisão por zero são mortos
 individualmente (não derrubam o sistema):
 
 ```
-EXCECAO v2 pid=2 ip=25290
-EXCECAO v3 pid=3 ip=25304
+EXCECAO v2 pid=2 ip=28278
+EXCECAO v3 pid=3 ip=28292
 ok
 SO ... x=2 ... v2=1 v3=1
 irq por vetor: v2=1 v3=1 v7=24 v10=22
@@ -399,7 +413,7 @@ exceção v2 deve matar o init e imprimir o relatório antes de parar o SO:
 
 ```
 I
-EXCECAO v2 pid=1 ip=24796
+EXCECAO v2 pid=1 ip=27784
 ...
 p1 v=0 e=0 p=0 b=0 pre=0 r=- E=1 P=1 B=0
 SO t=0 ocioso=0 irq r=0 s=1 c=0 x=1 pre=0 proc=1
@@ -431,8 +445,15 @@ ele chama `SO_MATA_PROC`.
 
 ## 5. Limitações
 
-- **Resolução de tempo = 1 instrução.** O SO agora combina `ticks * intervalo + contador_do_relogio` (porta 0x20), atingindo resolução de 1 instrução. A multiplicação e soma são feitas em base 100 (32 bits simulados) para não estourar o `int` de 16 bits.
-- **O tempo reportado agora é muito próximo do tempo de parede do simulador.** Com a medição em 32 bits (`ticks * intervalo + contador`), `SO t` fica a ~1.700 instruções do valor real (boot antes de o relógio ser programado). Em `t2p1`: SO t = 304.000 vs 302.911 real (erro ~0,4%). Em `t2.mob`: SO t = 224.000 vs 224.000 real (exato). Processos idênticos agora mostram tempos similares (ex: `t2p1` p3 e=3093, p4 e=1787 em vez de 4000 vs 0).
+- **Resolução de tempo = 1 tick do relógio.** As métricas usam
+  `ticks * intervalo`; portanto a resolução visível é o intervalo configurado
+  (1000, 2000 ou 4000 instruções). O auxiliar de leitura do contador da porta
+  0x20 existe, mas não alimenta os acumuladores de 16 bits do relatório.
+- **`SO t` mede o tempo até o relatório, não o total do simulador.** O total
+  inclui o boot anterior à programação do relógio e a impressão do relatório.
+  Em `t2p1`, por exemplo, `SO t=304.000` e o simulador para após 410.658
+  instruções. Em `t2.mob`, `SO t=224.000` e o total é 303.361. Os tempos por
+  processo são múltiplos do intervalo do relógio.
 - **E e pre medem eventos diferentes.** `E` conta entradas em execução;
   `pre` conta toda expiração do quantum, inclusive quando o mesmo processo
   volta imediatamente a executar por ser o único pronto. Bloqueios e mortes
@@ -529,7 +550,7 @@ A pids: 2 3 4
 B tabela: cheio(-1) n=7
 C erros: inexist=-1, auto=-1
 fim
-SO t=304000 ... (resolução 1 instrução)
+SO t=304000 ... (resolução = intervalo de 4000)
 ```
 
 ---
@@ -561,7 +582,7 @@ TERM=xterm-256color COLUMNS=120 LINES=50 build/simulador_largo parte3/t2.mob
 ```
 ini
 ......fim
-SO t=224000 ... p2 pre=11 ... p1 b=220000
+SO t=224000 ... p2 pre=11 ... p1 b=216000
 ```
 
 ---
@@ -574,8 +595,8 @@ TERM=xterm-256color COLUMNS=120 LINES=50 build/simulador_largo parte3/t2ex.mob
 **Saída:**
 ```
 excecoes
-EXCECAO v2 pid=2 ip=25290
-EXCECAO v3 pid=3 ip=25304
+EXCECAO v2 pid=2 ip=28278
+EXCECAO v3 pid=3 ip=28292
 ok
 fim
 ```
@@ -590,7 +611,7 @@ TERM=xterm-256color COLUMNS=120 LINES=50 build/simulador_largo parte3/t2initex.m
 **Saída:**
 ```
 I
-EXCECAO v2 pid=1 ip=24796
+EXCECAO v2 pid=1 ip=27784
 ...
 SO t=0 ... (marcador X NÃO aparece)
 ```
@@ -645,8 +666,8 @@ Cada `make run-*` gera `build/exp/out-P*-Q*-I*-C*.mob` — execute com `build/si
 ### Limpeza
 
 ```bash
-make clean      # Remove apenas build/ (preserva binários entregues)
-make distclean  # Remove tudo, incluindo os 6 .mob entregues
+make clean      # Remove apenas build/ (preserva os .mob ja gerados)
+make distclean  # Remove tudo, incluindo os 6 .mob gerados
 ```
 
 ---
@@ -659,7 +680,7 @@ make distclean  # Remove tudo, incluindo os 6 .mob entregues
 | **Variáveis de ambiente** | `TERM=xterm-256color COLUMNS=120 LINES=50` necessárias no WSL/Linux para ncurses |
 | **Comandos no simulador** | `D0` = velocidade máxima, `C` = continua, `E<texto>` = entrada console |
 | **Parte 2 (interativa)** | Após `C`, digite `Eab` + Enter para fornecer entrada aos leitores |
-| **Métricas** | Resolução = **1 instrução** (ticks × intervalo + contador hardware 0x20) |
+| **Métricas** | Resolução = **1 tick do relógio** (tempo = ticks × intervalo; 1000, 2000 ou 4000 instruções) |
 | **Determinismo** | 27 configs não interativas = reprodutíveis; Parte 2 e carga 3 = variam com tempo de digitação |
 
 ---
@@ -677,18 +698,18 @@ t2/
 ├── parte3/           # t2.mob, t2ex.mob, t2initex.mob, t2vivos.mob + SAIDA_ESPERADA.txt + resultados/
 ├── build/            # GERADO (não entregue)
 ├── historico/        # fontes ao final da Parte II (não participa do build)
-└── *.mob (6 arquivos em parte1/, parte2/, parte3/)  # ENTREGUES
+└── *.mob (6 arquivos em parte1/, parte2/, parte3/)  # gerados por make
 ```
 
 ---
 
 ### Reprodutibilidade
 
-> **Recompilar com estas fontes e executar reproduz os mesmos números** (o `.mob` sai idêntico byte a byte ao entregue).
+> **Recompilar com estas fontes e executar reproduz os mesmos resultados** para a mesma versão de `mcc`/montador. Os `.mob` são gerados pelo `make` e não estão versionados; pequenas variações de ±1 tick podem ocorrer com outra toolchain.
 
 ```bash
 make clean && make
-# Todos os 6 .mob saem idênticos byte a byte aos entregues
+# Todos os 6 .mob sao gerados por este comando
 ```
 
 Execuções interativas (Parte II e carga 3) variam no tempo ocioso conforme o atraso na digitação da entrada (`Eab`).
@@ -709,7 +730,7 @@ Execuções interativas (Parte II e carga 3) variam no tempo ocioso conforme o a
 | prioridade                          | `so_escalona`                                         | `parte3/resultados/out-*.txt`                                                                                 |
 | métricas do sistema                | `so_relatorio`                                        | resultados das três partes                                                                                     |
 | métricas por processo              | `struct Registro`                                     | resultados das três partes                                                                                     |
-| tempo em 32 bits (1 instr)         | `tempo_instrucoes`, `kernel_tempo32`, `_f_le_contador_relogio` | `parte1/resultados/t2p1.txt` (SO t=304000 vs 302911 real)                                                      |
+| tempo em instruções (resolução = intervalo) | `tempo`, `ticks`, `INTERVALO`; auxiliar `tempo_instrucoes`/`_f_le_contador_relogio` existe mas não é usado | `parte1/resultados/t2p1.txt` (SO t=304000, intervalo 4000)                                                      |
 | relatório quando o init morrer     | ramo de `pid_init` em `so_mata_proc`/`so_excecao` | `parte3/resultados/t2initex.txt` testa a morte do init por exceção; `t2ex.txt` testa exceções em filhos |
 | processos vivos no relatório        | `arquiva_vivos` em `so_relatorio`                      | `parte3/resultados/t2vivos.txt`                                                                                |
 | contagem por vetor de interrupção | `int_tipo[16]`                                        | resultados das três partes                                                                                     |

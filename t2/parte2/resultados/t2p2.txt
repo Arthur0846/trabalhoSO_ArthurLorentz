@@ -6,12 +6,12 @@ fim
 
 tempo = ticks x intervalo de relogio, em instrucoes
 intervalo do relogio = 4000 instrucoes por tick
-p2 v=16000 e=12000 p=4000 b=0 pre=0 r=- E=1 P=1 B=0
-p3 v=84000 e=4000 p=0 b=80000 pre=0 r=0 E=2 P=2 B=1
-p4 v=88000 e=8000 p=4000 b=76000 pre=0 r=0 E=2 P=2 B=1
-p1 v=112000 e=12000 p=4000 b=96000 pre=0 r=0 E=3 P=3 B=2
-SO t=112000 ocioso=76000 irq r=28 s=53 c=1 x=0 pre=0 proc=4
-irq por vetor: v7=53 v8=1 v10=28
+p2 v=12000 e=12000 p=0 b=0 pre=0 r=- E=1 P=1 B=0
+p3 v=184000 e=0 p=4000 b=180000 pre=0 r=0 E=2 P=2 B=1
+p4 v=188000 e=8000 p=4000 b=176000 pre=0 r=0 E=2 P=2 B=1
+p1 v=212000 e=16000 p=4000 b=192000 pre=0 r=0 E=3 P=3 B=2
+SO t=212000 ocioso=176000 irq r=53 s=53 c=1 x=0 pre=0 proc=4
+irq por vetor: v7=53 v8=1 v10=53
 
 
-CPU parada (halt) apos 166714 instrucoes.
+CPU parada (halt) apos 266298 instrucoes.

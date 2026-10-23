@@ -4,15 +4,15 @@ ini
 tempo = ticks x intervalo de relogio, em instrucoes
 intervalo do relogio = 2000 instrucoes por tick
 p3 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p4 v=6000 e=4000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p5 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p6 v=6000 e=4000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p7 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p8 v=6000 e=4000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
-p2 v=286000 e=266000 p=2000 b=18000 pre=29 r=0 E=36 P=36 B=6
-p1 v=292000 e=8000 p=0 b=284000 pre=0 r=0 E=2 P=2 B=1
-SO t=292000 ocioso=0 irq r=146 s=36 c=0 x=0 pre=29 proc=8
-irq por vetor: v7=36 v10=146
+p4 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
+p5 v=6000 e=4000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
+p6 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
+p7 v=6000 e=4000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
+p8 v=4000 e=2000 p=2000 b=0 pre=0 r=- E=1 P=1 B=0
+p2 v=284000 e=266000 p=2000 b=16000 pre=29 r=0 E=36 P=36 B=6
+p1 v=288000 e=6000 p=0 b=282000 pre=0 r=0 E=2 P=2 B=1
+SO t=288000 ocioso=0 irq r=144 s=36 c=0 x=0 pre=29 proc=8
+irq por vetor: v7=36 v10=144
 
 
-CPU parada (halt) apos 379241 instrucoes.
+CPU parada (halt) apos 378394 instrucoes.
